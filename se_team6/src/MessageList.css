@@ -1,0 +1,42 @@
+.message-list {
+    flex-grow: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.message-bubble {
+    display: flex;
+    margin-bottom: 16px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.message-text {
+    padding: 12px 18px;
+    border-radius: 20px;
+    max-width: 80%;
+}
+
+.message-bubble.ai {
+    justify-content: flex-start;
+}
+.message-bubble.ai .message-text {
+    background-color: #f1f3f4;
+    color: var(--text-primary);
+}
+
+.message-bubble.user {
+    justify-content: flex-end;
+}
+.message-bubble.user .message-text {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.typing-indicator {
+    padding: 12px 18px;
+    border-radius: 20px;
+    background-color: #f1f3f4;
+    color: var(--text-secondary);
+    display: inline-block;
+}
