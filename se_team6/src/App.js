@@ -6,7 +6,7 @@ import './App.css';
 
 function App() {
     const [chatRooms, setChatRooms] = useState([
-        { id: 1, name: 'Gemini와 대화', messages: [{ sender: 'ai', text: '안녕하세요! Gemini입니다.' }] },
+        { id: 1, name: 'Gemini와 대화', messages: [{ sender: 'ai', type: 'text', content: '안녕하세요! Gemini입니다. "카드" 또는 "캐러셀"을 입력해보세요.' }] },
         { id: 2, name: '코드 리뷰', messages: [] },
     ]);
     const [selectedRoomId, setSelectedRoomId] = useState(1);
@@ -17,7 +17,7 @@ function App() {
         if (!isTyping && messageInputRef.current) {
             messageInputRef.current.focus();
         }
-    }, [isTyping, selectedRoomId]); // 채팅방이 바뀔 때도 포커스
+    }, [isTyping, selectedRoomId]);
 
     const handleNewChat = () => {
         const newRoomId = Date.now();
@@ -31,14 +31,14 @@ function App() {
     };
 
     const handleSendMessage = async (roomId, messageText) => {
-        const userMessage = { sender: 'user', text: messageText };
+        const userMessage = { sender: 'user', type: 'text', content: messageText };
         setChatRooms(prevRooms => prevRooms.map(room =>
             room.id === roomId ? { ...room, messages: [...room.messages, userMessage] } : room
         ));
 
         setIsTyping(true);
-        const aiResponseText = await mockChatAPI(messageText);
-        const aiMessage = { sender: 'ai', text: aiResponseText };
+        const aiResponse = await mockChatAPI(messageText);
+        const aiMessage = { sender: 'ai', type: aiResponse.type, content: aiResponse.content };
 
         setChatRooms(prevRooms => prevRooms.map(room =>
             room.id === roomId ? { ...room, messages: [...room.messages, aiMessage] } : room
