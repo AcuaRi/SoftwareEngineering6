@@ -1,0 +1,41 @@
+/* src/pages/MainPage.css */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+}
+.main-header {
+    background-color: white;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    flex: none;
+    z-index: 10;
+}
+.app-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 15px;
+}
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow: hidden;
+    position: relative;
+}
+.panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr; /* 3단 레이아웃 */
+    gap: 20px;
+    height: 100%;
+    width: 100%;
+}
+.loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 50; backdrop-filter: blur(4px);
+}
