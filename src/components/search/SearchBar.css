@@ -1,0 +1,11 @@
+/* src/components/search/SearchBar.css */
+.search-form { width: 100%; max-width: 700px; margin: 0 auto; }
+.search-wrapper { display: flex; gap: 10px; }
+.search-input {
+    flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; outline: none;
+}
+.search-input:focus { border-color: #2563eb; }
+.search-btn {
+    padding: 0 24px; background-color: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+}
+.search-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
