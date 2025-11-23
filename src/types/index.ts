@@ -9,13 +9,21 @@ export interface Place {
     reviewSummary: string;
 }
 
-export interface RecommendationResponse {
-    summary: string;
+// ★ 신규: 장소들의 집합인 '코스' 정의
+export interface Course {
+    id: string;
+    title: string;       // 예: "로맨틱 야경 코스"
+    description: string; // 예: "연인과 함께하기 좋은..."
     places: Place[];
 }
 
-// ★ 추가: 채팅 메시지 타입
+export interface RecommendationResponse {
+    summary: string;
+    courses: Course[]; // ★ 변경: 단순 places 배열 -> 코스 배열
+}
+
 export interface ChatMessage {
-    role: 'user' | 'assistant'; // user: 사용자, assistant: AI
+    role: 'user' | 'assistant';
     text: string;
+    courses?: Course[]; // ★ 추가: 이 메시지에 딸린 추천 코스들
 }

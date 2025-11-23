@@ -1,0 +1,85 @@
+/* src/components/chat/CourseCarousel.css */
+
+/* 전체 래퍼 (버튼 포함) */
+.carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.carousel-container {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 10px 4px; /* 그림자 잘림 방지 여백 */
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox 스크롤바 숨김 */
+    width: 100%;
+}
+
+.carousel-container::-webkit-scrollbar {
+    display: none; /* Chrome 스크롤바 숨김 */
+}
+
+.course-card {
+    flex: 0 0 240px; /* 카드 고정 너비 */
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s;
+    scroll-snap-align: start; /* 스크롤 시 카드 단위로 딱딱 붙게 하려면 추가 */
+}
+
+.course-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* ... (기존 폰트/배지/버튼 스타일 유지) ... */
+.course-title { font-size: 1rem; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
+.course-desc { font-size: 0.85rem; color: #6b7280; margin-bottom: 12px; flex: 1; line-height: 1.4; }
+.place-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+.place-badge { font-size: 0.75rem; background-color: #f3f4f6; color: #4b5563; padding: 2px 6px; border-radius: 4px; }
+.apply-btn { width: 100%; padding: 8px; background-color: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: background-color 0.2s; }
+.apply-btn:hover { background-color: #4338ca; }
+
+/* ★ 추가: 네비게이션 화살표 버튼 스타일 */
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: #4b5563;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 4px; /* 텍스트 수직 정렬 미세 조정 */
+}
+
+.nav-btn:hover {
+    background-color: white;
+    color: #111827;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+.nav-btn.left {
+    left: -10px; /* 카드 왼쪽 살짝 밖 */
+}
+
+.nav-btn.right {
+    right: -10px; /* 카드 오른쪽 살짝 밖 */
+}
