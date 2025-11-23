@@ -1,38 +1,67 @@
 /* src/pages/MainPage.css */
+
+/* 전체 페이지 컨테이너 */
 .main-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
     width: 100vw;
+    background-color: #1e293b; /* 청사진 느낌의 어두운 배경색 (선택사항) */
 }
+
+/* 상단 헤더 (검색바 제거로 심플하게 변경) */
 .main-header {
     background-color: white;
     padding: 15px 20px;
     border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     flex: none;
     z-index: 10;
 }
+
 .app-title {
-    text-align: center;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 800;
     color: #1f2937;
-    margin-bottom: 15px;
+    margin: 0; /* 마진 제거 */
 }
+
+/* 메인 콘텐츠 영역 */
 .main-content {
     flex: 1;
-    padding: 20px;
+    padding: 16px;
     overflow: hidden;
     position: relative;
 }
+
+/* ★ 핵심 변경: 2단 좌우 분할 레이아웃 */
 .panels-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr; /* 3단 레이아웃 */
-    gap: 20px;
+    grid-template-columns: 1fr 1fr; /* 1:1 비율 (좌측 50%, 우측 50%) */
+    gap: 16px;
     height: 100%;
     width: 100%;
 }
+
+/* ★ 신규 추가: 우측 컬럼 (지도 + 리스트 수직 배치) */
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    overflow: hidden; /* 내부 스크롤 제어 */
+}
+
+/* 우측 패널 높이 분배 (지도 50%, 리스트 50%) */
+.right-top-panel {
+    flex: 1; /* 남은 공간의 절반 */
+    min-height: 0; /* Flex 자식의 스크롤을 위해 필수 */
+}
+.right-bottom-panel {
+    flex: 1; /* 남은 공간의 절반 */
+    min-height: 0;
+}
+
+/* 로딩 오버레이 */
 .loading-overlay {
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(255, 255, 255, 0.8);
