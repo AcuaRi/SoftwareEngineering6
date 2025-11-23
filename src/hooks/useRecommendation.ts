@@ -1,47 +1,38 @@
 import { useState } from 'react';
-import { getMockRecommendation } from '../api/mockRecommendationApi'; // 또는 실제 API
-import { RecommendationResponse, ChatMessage } from '../types';
+import { getMockRecommendation } from '../api/mockRecommendationApi';
+import { ChatMessage } from '../types';
 
 export const useRecommendation = () => {
-    const [data, setData] = useState<RecommendationResponse | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    // ★ 추가: 대화 기록 상태 관리 (초기값: 환영 메시지)
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { role: 'assistant', text: "안녕하세요! 어디로 떠나고 싶으신가요?\n장소, 목적, 인원을 말씀해주시면 최고의 코스를 추천해 드릴게요." }
+        { role: 'assistant', text: "안녕하세요! 원하시는 데이트 지역이나 테마를 말씀해주세요." }
     ]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const searchPlaces = async (query: string) => {
         if (!query.trim()) return;
 
-        // 1. 사용자 메시지 추가
-        const userMsg: ChatMessage = { role: 'user', text: query };
-        setMessages(prev => [...prev, userMsg]);
-
+        // 1. 유저 메시지 추가
+        setMessages(prev => [...prev, { role: 'user', text: query }]);
         setIsLoading(true);
-        setError(null);
 
         try {
-            // API 호출
+            // 2. API 호출
             const result = await getMockRecommendation(query);
 
-            // 2. 데이터 갱신
-            setData(result);
+            // 3. AI 응답 메시지 추가 (여기에 courses를 포함!)
+            // ★ 중요: 여기서 우측 패널 데이터를 갱신하지 않음.
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                text: result.summary,
+                courses: result.courses // 코스 후보군 첨부
+            }]);
 
-            // 3. AI 응답 메시지 추가
-            const aiMsg: ChatMessage = { role: 'assistant', text: result.summary };
-            setMessages(prev => [...prev, aiMsg]);
-
-        } catch (err: any) {
-            setError("오류가 발생했습니다.");
-            // 에러 발생 시에도 메시지로 알려주면 좋음
-            setMessages(prev => [...prev, { role: 'assistant', text: "죄송합니다. 정보를 가져오는 중 오류가 발생했습니다." }]);
+        } catch (err) {
+            setMessages(prev => [...prev, { role: 'assistant', text: "오류가 발생했습니다." }]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // messages 상태도 반환
-    return { data, messages, isLoading, error, searchPlaces };
+    return { messages, isLoading, searchPlaces };
 };
