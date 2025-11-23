@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import './MainPage.css';
-import { SearchBar } from '../components/search/SearchBar';
 import { AiSummaryPanel } from '../components/panels/AiSummaryPanel';
 import { MapPanel } from '../components/panels/MapPanel';
 import { PlaceListPanel } from '../components/panels/PlaceListPanel';
 import { useRecommendation } from '../hooks/useRecommendation';
 
 const MainPage: React.FC = () => {
-    const { data, isLoading, error, searchPlaces } = useRecommendation();
+    // hook에서 messages도 받아옴
+    const { data, messages, isLoading, error, searchPlaces } = useRecommendation();
     const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
-    const summary = data?.summary || "";
+    // data가 없어도 places는 빈 배열로 처리 (초기 렌더링 오류 방지)
     const places = data?.places || [];
 
     const handleSelectPlace = (id: string) => {
@@ -20,20 +20,40 @@ const MainPage: React.FC = () => {
     return (
         <div className="main-container">
             <header className="main-header">
-                <h1 className="app-title">썸플레이스</h1>
-                <SearchBar onSearch={searchPlaces} isLoading={isLoading} />
+                <h1 className="app-title">썸플레이스 (SomePlace)</h1>
             </header>
+
             <main className="main-content">
-                {isLoading && (
-                    <div className="loading-overlay">
-                        <div className="loading-text">AI 분석 중...</div>
-                        <p>사용자 의도 파악 • 장소 검색 • 리뷰 분석</p>
-                    </div>
-                )}
+                {/* 로딩 표시는 이제 채팅창 내부에 말줄임표(...)로 처리하거나, 필요시 유지 */}
+
                 <div className="panels-grid">
-                    <AiSummaryPanel summary={summary} />
-                    <MapPanel places={places} selectedPlaceId={selectedPlaceId} onSelectPlace={handleSelectPlace} />
-                    <PlaceListPanel places={places} selectedPlaceId={selectedPlaceId} onSelectPlace={handleSelectPlace} />
+
+                    {/* [좌측] AI 채팅창 */}
+                    <section style={{ height: '100%', minWidth: 0 }}>
+                        <AiSummaryPanel
+                            messages={messages} // ★ summary 대신 messages 전달
+                            onSearch={searchPlaces}
+                            isLoading={isLoading}
+                        />
+                    </section>
+
+                    {/* [우측] 지도 + 상세정보 */}
+                    <section className="right-column">
+                        <div className="right-top-panel">
+                            <MapPanel
+                                places={places}
+                                selectedPlaceId={selectedPlaceId}
+                                onSelectPlace={handleSelectPlace}
+                            />
+                        </div>
+                        <div className="right-bottom-panel">
+                            <PlaceListPanel
+                                places={places}
+                                selectedPlaceId={selectedPlaceId}
+                                onSelectPlace={handleSelectPlace}
+                            />
+                        </div>
+                    </section>
                 </div>
             </main>
         </div>
