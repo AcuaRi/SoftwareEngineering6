@@ -2,62 +2,66 @@
 
 .main-container {
     display: flex;
-    flex-direction: column;
     height: 100vh;
     width: 100vw;
-    /* 배경에 아주 은은한 그라데이션 추가 */
-    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-}
-
-.main-header {
-    background-color: rgba(255, 255, 255, 0.8); /* 반투명 */
-    backdrop-filter: blur(10px);
-    padding: 15px 20px;
-    border-bottom: 1px solid #fecdd3; /* 테두리도 핑크 */
-    flex: none;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.app-title {
-    font-size: 1.4rem;
-    font-weight: 800;
-    /* ★ 타이틀 색상: 로맨틱한 핑크 */
-    color: #e11d48;
-    letter-spacing: -0.5px;
-}
-
-.main-content {
-    flex: 1;
-    padding: 20px;
+    background-color: #fff; /* 전체 흰색 배경 */
     overflow: hidden;
+}
+
+/* 중앙 AI 패널 영역 */
+.center-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: margin-right 0.3s ease; /* 우측 패널 열릴 때 부드럽게 */
+    min-width: 0; /* Flex 자식 줄어듦 허용 */
+}
+
+/* 우측 정보 패널 (지도+리스트) */
+.info-panel-wrapper {
+    width: 0;
+    opacity: 0;
+    border-left: 1px solid #e2e8f0;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease, opacity 0.2s ease;
+    overflow: hidden; /* 닫혔을 때 내용 숨김 */
     position: relative;
 }
 
-.panels-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px; /* 간격을 조금 더 넓혀서 시원하게 */
-    height: 100%;
-    width: 100%;
+.info-panel-wrapper.open {
+    width: 400px; /* 열렸을 때 너비 */
+    opacity: 1;
 }
 
-.right-column {
+/* 우측 패널 내부 레이아웃 */
+.info-panel-content {
     display: flex;
     flex-direction: column;
-    gap: 20px;
     height: 100%;
-    overflow: hidden;
+    width: 400px; /* 내용물 너비 고정 (애니메이션 중 찌그러짐 방지) */
 }
 
-.right-top-panel { flex: 1; min-height: 0; }
-.right-bottom-panel { flex: 1; min-height: 0; }
-
-.loading-overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(255, 255, 255, 0.7);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 50; backdrop-filter: blur(4px);
+.info-header {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #fff;
 }
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #64748b;
+    padding: 4px;
+}
+.close-btn:hover { color: #1e293b; }
+
+.right-top-panel { flex: 1; min-height: 0; position: relative; }
+.right-bottom-panel { flex: 1; min-height: 0; border-top: 1px solid #e2e8f0; }
