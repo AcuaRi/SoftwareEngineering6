@@ -1,75 +1,202 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
-import { Place } from '../../types';
+import { Map, MapMarker, useKakaoLoader, Polyline, CustomOverlayMap } from "react-kakao-maps-sdk";
+import { Place, SavedPlace, Category } from '../../types';
 
 interface Props {
     places?: Place[];
     selectedPlaceId: string | null;
     onSelectPlace: (id: string) => void;
+
+    routePath?: { lat: number; lng: number }[];
+
+    savedPlaces: SavedPlace[];
+    routeStartId: string | null;
+    routeEndId: string | null;
+    onSavePlace: (place: Place, category: Category) => void;
+    onRemoveSavedPlace: (placeId: string, category: Category) => void;
+    onSetRouteStart: (placeId: string, category: Category) => void;
+    onSetRouteEnd: (placeId: string, category: Category) => void;
 }
 
-export const KakaoMapViewer: React.FC<Props> = ({ places = [], selectedPlaceId, onSelectPlace }) => {
+const createMarkerSvg = (color: string, label: string) => {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+        <circle cx="16" cy="16" r="14" fill="${color}" />
+        <text x="16" y="21" text-anchor="middle" font-size="14" fill="#ffffff" font-weight="bold">
+          ${label}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+export const KakaoMapViewer: React.FC<Props> = ({
+    places = [],
+    selectedPlaceId,
+    onSelectPlace,
+    routePath = [],
+    savedPlaces,
+    routeStartId,
+    routeEndId,
+    onSavePlace,
+    onRemoveSavedPlace,
+    onSetRouteStart,
+    onSetRouteEnd
+}) => {
     const [loading, error] = useKakaoLoader({
-        appkey: "YOUR_JAVASCRIPT_KEY", // ★ 본인 키 입력
+        appkey: process.env.REACT_APP_KAKAO_JS_KEY ?? "",
         libraries: ["services", "clusterer"],
     });
 
-    const defaultCenter = { lat: 37.532600, lng: 127.024612 };
+    const defaultCenter = { lat: 37.5326, lng: 127.024612 };
     const [center, setCenter] = useState(defaultCenter);
 
-    // ★ 지도 객체를 저장할 ref
     const mapRef = useRef<kakao.maps.Map>(null);
+    const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
 
-    // 1. 선택된 장소가 바뀌면 그곳으로 이동 (기존 로직 유지)
     useEffect(() => {
-        if (selectedPlaceId && places.length > 0) {
-            const selectedPlace = places.find(p => p.id === selectedPlaceId);
-            if (selectedPlace) {
-                setCenter({ lat: selectedPlace.latitude, lng: selectedPlace.longitude });
-            }
-        }
+        if (!selectedPlaceId || places.length === 0) return;
+        const p = places.find(pl => pl.id === selectedPlaceId);
+        if (!p) return;
+
+        setCenter({ lat: p.latitude, lng: p.longitude });
     }, [selectedPlaceId, places]);
 
-    // ★ 2. 장소 리스트(places)가 새로 들어오면 모든 마커가 보이도록 지도 범위 재설정
     useEffect(() => {
-        if (places.length > 0 && mapRef.current) {
-            // Kakao Maps Bounds 객체 생성
-            const bounds = new kakao.maps.LatLngBounds();
+        if (places.length === 0 || !mapRef.current) return;
 
-            // 모든 장소의 좌표를 bounds에 추가
-            places.forEach((place) => {
-                bounds.extend(new kakao.maps.LatLng(place.latitude, place.longitude));
-            });
+        const bounds = new kakao.maps.LatLngBounds();
+        places.forEach(p => {
+            bounds.extend(new kakao.maps.LatLng(p.latitude, p.longitude));
+        });
 
-            // 지도가 bounds에 맞춰지도록 설정 (여백을 두고 조정)
-            mapRef.current.setBounds(bounds);
-        }
-    }, [places]); // places가 바뀔 때마다 실행
+        mapRef.current.setBounds(bounds);
+    }, [places]);
 
-    if (loading) return <div style={{width:"100%", height:"100%", background:"#f3f4f6"}}>로딩중...</div>;
-    if (error) return <div style={{width:"100%", height:"100%", background:"#fee2e2"}}>지도 에러</div>;
+    const getSavedInfo = (placeId: string) => {
+        const saved = savedPlaces.find(p => p.placeId === placeId);
+        if (!saved) return null;
+
+        const list = savedPlaces.filter(p => p.category === saved.category);
+        const idx = list.findIndex(p => p.placeId === placeId);
+
+        const colorMap: Record<Category, string> = {
+            restaurant: "#ef4444",
+            cafe: "#22c55e",
+            spot: "#3b82f6"
+        };
+
+        return {
+            category: saved.category,
+            order: idx + 1,
+            color: colorMap[saved.category]
+        };
+    };
+
+    if (loading)
+        return <div style={{ width: "100%", height: "100%", background: "#f3f4f6" }}>로딩 중…</div>;
+    if (error)
+        return <div style={{ width: "100%", height: "100%", background: "#fee2e2" }}>지도 에러</div>;
 
     return (
         <Map
             center={center}
             style={{ width: "100%", height: "100%" }}
             level={3}
-            onCreate={(map) => (mapRef.current = map)} // ★ 지도가 생성되면 ref에 저장
+            onCreate={(map) => (mapRef.current = map)}
         >
-            {places.map((place) => (
-                <MapMarker
-                    key={place.id}
-                    position={{ lat: place.latitude, lng: place.longitude }}
-                    onClick={() => onSelectPlace(place.id)}
-                    clickable={true}
-                >
-                    {selectedPlaceId === place.id && (
-                        <div style={{ padding: "5px", color: "#000", textAlign: "center", minWidth: "150px" }}>
-                            {place.name}
-                        </div>
-                    )}
-                </MapMarker>
-            ))}
+            {places.map(place => {
+                const saved = getSavedInfo(place.id);
+                const markerKey = `${place.id}-${saved ? "saved" : "normal"}`;
+                const markerId = place.id;
+
+                const fullKey = saved ? `${saved.category}-${place.id}` : null;
+                const isStart = fullKey === routeStartId;
+                const isEnd = fullKey === routeEndId;
+
+                const img = saved
+                    ? {
+                          src: createMarkerSvg(saved.color, String(saved.order)),
+                          size: { width: 32, height: 32 },
+                          options: { offset: { x: 16, y: 32 } }
+                      }
+                    : undefined;
+
+                return (
+                    <React.Fragment key={place.id}>
+                        <MapMarker
+                            key={markerKey}
+                            position={{ lat: place.latitude, lng: place.longitude }}
+                            onClick={() => {
+                                onSelectPlace(place.id);
+                                setActiveMarkerId(prev => (prev === markerId ? null : markerId));
+                            }}
+                            clickable={true}
+                            image={img}
+                        />
+
+                        {activeMarkerId === markerId && (
+                            <CustomOverlayMap
+                                position={{ lat: place.latitude, lng: place.longitude }}
+                                yAnchor={1.1}
+                                xAnchor={0.5}
+                            >
+                                <div
+                                    style={{
+                                        background: "white",
+                                        padding: 8,
+                                        borderRadius: 8,
+                                        boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                                        minWidth: 140,
+                                        fontSize: 12
+                                    }}
+                                >
+                                    {!saved ? (
+                                        <>
+                                            <div style={{ fontWeight: 600 }}>카테고리 선택</div>
+                                            <button onClick={() => { onSavePlace(place, "restaurant"); setActiveMarkerId(null); }}>
+                                                🍽 음식점
+                                            </button>
+                                            <button onClick={() => { onSavePlace(place, "cafe"); setActiveMarkerId(null); }}>
+                                                ☕ 카페
+                                            </button>
+                                            <button onClick={() => { onSavePlace(place, "spot"); setActiveMarkerId(null); }}>
+                                                📍 가볼만한 곳
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div style={{ fontWeight: 600 }}>{place.name}</div>
+                                            <button onClick={() => { onSetRouteStart(place.id, saved.category); setActiveMarkerId(null); }}>
+                                                🚩 출발지로 설정
+                                            </button>
+                                            <button onClick={() => { onSetRouteEnd(place.id, saved.category); setActiveMarkerId(null); }}>
+                                                🏁 도착지로 설정
+                                            </button>
+                                            <button
+                                                onClick={() => { onRemoveSavedPlace(place.id, saved.category); setActiveMarkerId(null); }}
+                                                style={{ color: "#b91c1c" }}
+                                            >
+                                                ❌ 목록에서 제거
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </CustomOverlayMap>
+                        )}
+                    </React.Fragment>
+                );
+            })}
+
+            {/* 경로 Polyline */}
+            {routePath?.length > 0 && (
+                <Polyline
+                    path={routePath}
+                    strokeWeight={5}
+                    strokeColor="#ff0000"
+                    strokeOpacity={0.85}
+                />
+            )}
         </Map>
     );
 };
