@@ -1,29 +1,38 @@
 export interface Place {
-    id: string;
-    name: string;
-    address: string;
-    latitude: number;
-    longitude: number;
-    category: string;
-    rating: number;
-    reviewSummary: string;
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  category: string;
+  rating: number;
+  reviewSummary: string;
 }
 
 // ★ 신규: 장소들의 집합인 '코스' 정의
 export interface Course {
-    id: string;
-    title: string;       // 예: "로맨틱 야경 코스"
-    description: string; // 예: "연인과 함께하기 좋은..."
-    places: Place[];
+  id: string;
+  title: string; // 예: "로맨틱 야경 코스"
+  description: string; // 예: "연인과 함께하기 좋은..."
+  places: Place[];
 }
 
 export interface RecommendationResponse {
-    summary: string;
-    courses: Course[]; // ★ 변경: 단순 places 배열 -> 코스 배열
+  summary: string;
+  courses: Course[]; // ★ 변경: 단순 places 배열 -> 코스 배열
 }
 
 export interface ChatMessage {
-    role: 'user' | 'assistant';
-    text: string;
-    courses?: Course[]; // ★ 추가: 이 메시지에 딸린 추천 코스들
+  role: "user" | "assistant";
+  text: string;
+  courses?: Course[]; // ★ 추가: 이 메시지에 딸린 추천 코스들
+}
+
+export type Category = "restaurant" | "cafe" | "spot";
+// 음식점 / 카페 / 가볼만한 곳
+
+export interface SavedPlace {
+  placeId: string; // Place.id
+  place: Place;
+  category: Category;
 }
