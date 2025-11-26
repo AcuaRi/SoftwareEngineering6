@@ -2,21 +2,20 @@
 import React, { useEffect, useRef } from 'react';
 import './PanelStyles.css'; // 공통 패널 스타일
 import { SearchBar } from '../search/SearchBar';
-import { ChatMessage, Course } from '../../types';
-import { CourseCarousel } from '../chat/CourseCarousel';
+import { ChatMessage, Place } from '../../types';
+import { PlaceCarousel } from '../chat/PlaceCarousel';
 
 interface Props {
     messages: ChatMessage[];
     onSearch: (query: string) => void;
-    onApplyCourse: (course: Course) => void;
+    onApplyPlace: (place: Place) => void; // 장소 선택 핸들러
     isLoading: boolean;
 }
 
-export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyCourse, isLoading }) => {
-    // 스크롤 될 영역(div)을 잡기 위한 ref
+export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyPlace, isLoading }) => {
+    // 자동 스크롤을 위한 Ref
     const bodyRef = useRef<HTMLDivElement>(null);
 
-    // 메시지가 추가되거나 로딩 상태가 바뀔 때마다 스크롤을 맨 아래로 부드럽게 이동
     useEffect(() => {
         if (bodyRef.current) {
             bodyRef.current.scrollTo({
@@ -27,10 +26,9 @@ export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyCou
     }, [messages, isLoading]);
 
     return (
-        // 전체 패널 컨테이너
         <div className="panel-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-            {/* 헤더: 핑크 그라데이션 적용 */}
+            {/* 헤더: 핑크 그라데이션 */}
             <div
                 className="panel-header"
                 style={{
@@ -43,12 +41,12 @@ export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyCou
         </span>
             </div>
 
-            {/* 채팅 내용 영역 */}
+            {/* 채팅 영역 */}
             <div
                 className="panel-body"
                 ref={bodyRef}
                 style={{
-                    backgroundColor: '#fff1f2', // 아주 연한 핑크 배경 (대화창 느낌)
+                    backgroundColor: '#fff1f2', // 연한 핑크 배경
                     flex: 1,
                     overflowY: 'auto',
                     display: 'flex',
@@ -71,44 +69,37 @@ export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyCou
                                 alignItems: isUser ? 'flex-end' : 'flex-start'
                             }}
                         >
-                            {/* 말풍선 스타일 */}
+                            {/* 말풍선 */}
                             <div
                                 style={{
-                                    // ★ 사용자: 진한 핫핑크, AI: 흰색
                                     backgroundColor: isUser ? '#e11d48' : 'white',
                                     color: isUser ? 'white' : '#374151',
-
                                     padding: '14px 18px',
                                     borderRadius: '20px',
-                                    // 말풍선 꼬리 효과
                                     borderTopRightRadius: isUser ? '4px' : '20px',
                                     borderTopLeftRadius: isUser ? '20px' : '4px',
-
-                                    // AI 말풍선은 연한 핑크 테두리로 구분
                                     border: isUser ? 'none' : '1px solid #fce7f3',
                                     boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-
                                     maxWidth: '85%',
                                     lineHeight: '1.6',
                                     whiteSpace: 'pre-wrap',
-                                    fontSize: '0.95rem',
-                                    wordBreak: 'keep-all'
+                                    fontSize: '0.95rem'
                                 }}
                             >
                                 {msg.text}
                             </div>
 
-                            {/* ★ 코스 추천 캐러셀 (AI 메시지이고, 코스 데이터가 있을 때만 렌더링) */}
-                            {!isUser && msg.courses && msg.courses.length > 0 && (
+                            {/* ★ 장소 캐러셀 (AI 메시지 & 장소 데이터 존재 시) */}
+                            {!isUser && msg.places && msg.places.length > 0 && (
                                 <div style={{ width: '100%', marginTop: '12px' }}>
-                                    <CourseCarousel courses={msg.courses} onApply={onApplyCourse} />
+                                    <PlaceCarousel places={msg.places} onSelect={onApplyPlace} />
                                 </div>
                             )}
                         </div>
                     );
                 })}
 
-                {/* 로딩 인디케이터 */}
+                {/* 로딩 표시 */}
                 {isLoading && (
                     <div
                         style={{
@@ -128,7 +119,7 @@ export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyCou
                 )}
             </div>
 
-            {/* 하단 입력창 영역 (고정) */}
+            {/* 입력창 영역 */}
             <div
                 style={{
                     padding: '16px 20px',

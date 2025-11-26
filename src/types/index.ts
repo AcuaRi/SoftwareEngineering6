@@ -7,6 +7,7 @@ export interface Place {
   category: string;
   rating: number;
   reviewSummary: string;
+  imageUrls: string[];
 }
 
 // ★ 신규: 장소들의 집합인 '코스' 정의
@@ -19,13 +20,15 @@ export interface Course {
 
 export interface RecommendationResponse {
   summary: string;
-  courses: Course[]; // ★ 변경: 단순 places 배열 -> 코스 배열
+  places: Place[];
+  //courses: Course[]; // ★ 변경: 단순 places 배열 -> 코스 배열
 }
 
 export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
-  courses?: Course[]; // ★ 추가: 이 메시지에 딸린 추천 코스들
+  places?: Place[];
+  //courses?: Course[]; // ★ 추가: 이 메시지에 딸린 추천 코스들
 }
 
 export type Category = "restaurant" | "cafe" | "spot";
