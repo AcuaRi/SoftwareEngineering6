@@ -39,3 +39,12 @@ export interface SavedPlace {
   place: Place;
   category: Category;
 }
+
+// ★ 신규: 채팅 세션 (대화방) 타입
+export interface ChatSession {
+    id: string;
+    title: string; // 채팅방 제목 (첫 번째 질문 내용 등)
+    messages: ChatMessage[];
+    createdAt: number; // 생성 시간 (정렬용)
+    lastUpdatedAt: number; // 마지막 활동 시간
+}

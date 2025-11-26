@@ -103,3 +103,31 @@
     display: flex;
     align-items: center;
 }
+
+/* .chat-item.active 스타일 추가 */
+.chat-item.active {
+    background-color: #fff1f2; /* 연한 핑크 배경 */
+    color: #e11d48; /* 핑크 텍스트 */
+    font-weight: 600;
+}
+
+/* 삭제 버튼 스타일 */
+.delete-chat-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-left: auto; /* 우측 끝으로 밀기 */
+    padding: 0 4px;
+    opacity: 0; /* 평소엔 숨김 */
+    transition: opacity 0.2s;
+}
+
+.chat-item:hover .delete-chat-btn {
+    opacity: 1; /* 호버 시 보임 */
+}
+
+.delete-chat-btn:hover {
+    color: #ef4444;
+}
