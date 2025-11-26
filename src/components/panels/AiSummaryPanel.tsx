@@ -1,6 +1,6 @@
 // src/components/panels/AiSummaryPanel.tsx
 import React, { useEffect, useRef } from 'react';
-import './PanelStyles.css'; // 공통 패널 스타일
+import './PanelStyles.css';
 import { SearchBar } from '../search/SearchBar';
 import { ChatMessage, Place } from '../../types';
 import { PlaceCarousel } from '../chat/PlaceCarousel';
@@ -8,90 +8,75 @@ import { PlaceCarousel } from '../chat/PlaceCarousel';
 interface Props {
     messages: ChatMessage[];
     onSearch: (query: string) => void;
-    onApplyPlace: (place: Place) => void; // 장소 선택 핸들러
+    onApplyPlace: (place: Place) => void;
     isLoading: boolean;
+    onToggleSidebar: () => void; // ★ 추가: 사이드바 토글 핸들러
 }
 
-export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyPlace, isLoading }) => {
-    // 자동 스크롤을 위한 Ref
+export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyPlace, isLoading, onToggleSidebar }) => {
     const bodyRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (bodyRef.current) {
-            bodyRef.current.scrollTo({
-                top: bodyRef.current.scrollHeight,
-                behavior: 'smooth',
-            });
+            bodyRef.current.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' });
         }
     }, [messages, isLoading]);
 
     return (
-        <div className="panel-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="panel-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', border: 'none', borderRadius: 0, boxShadow: 'none' }}>
 
-            {/* 헤더: 핑크 그라데이션 */}
-            <div
-                className="panel-header"
-                style={{
-                    background: 'linear-gradient(to right, #fb7185, #e11d48)',
-                    flex: 'none'
-                }}
-            >
-        <span style={{ fontSize: '1.05rem', letterSpacing: '-0.5px' }}>
-          🤖 AI 썸플레이스 어시스턴트
-        </span>
+            {/* 헤더 변경: 메뉴 버튼 추가 및 심플하게 */}
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                {/* 햄버거 메뉴 버튼 */}
+                <button
+                    onClick={onToggleSidebar}
+                    style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: '1.5rem', marginRight: '16px', color: '#64748b',
+                        padding: '4px', display: 'flex', alignItems: 'center'
+                    }}
+                >
+                    ☰
+                </button>
+                <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#e11d48' }}>SomePlace AI</span>
             </div>
 
-            {/* 채팅 영역 */}
             <div
                 className="panel-body"
                 ref={bodyRef}
                 style={{
-                    backgroundColor: '#fff1f2', // 연한 핑크 배경
+                    backgroundColor: '#fff', // 제미나이처럼 흰색 배경
                     flex: 1,
                     overflowY: 'auto',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '20px',
-                    padding: '24px',
+                    gap: '24px',
+                    padding: '20px 10%', // 중앙 정렬 느낌을 위해 좌우 여백 줌
                     minHeight: 0
                 }}
             >
                 {messages.map((msg, index) => {
                     const isUser = msg.role === 'user';
-
                     return (
-                        <div
-                            key={index}
-                            style={{
-                                width: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: isUser ? 'flex-end' : 'flex-start'
-                            }}
-                        >
+                        <div key={index} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
                             {/* 말풍선 */}
-                            <div
-                                style={{
-                                    backgroundColor: isUser ? '#e11d48' : 'white',
-                                    color: isUser ? 'white' : '#374151',
-                                    padding: '14px 18px',
-                                    borderRadius: '20px',
-                                    borderTopRightRadius: isUser ? '4px' : '20px',
-                                    borderTopLeftRadius: isUser ? '20px' : '4px',
-                                    border: isUser ? 'none' : '1px solid #fce7f3',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                    maxWidth: '85%',
-                                    lineHeight: '1.6',
-                                    whiteSpace: 'pre-wrap',
-                                    fontSize: '0.95rem'
-                                }}
-                            >
+                            <div style={{
+                                backgroundColor: isUser ? '#f1f5f9' : 'transparent', // 유저는 회색 박스, AI는 투명
+                                color: '#334155',
+                                padding: isUser ? '12px 20px' : '0',
+                                borderRadius: '24px',
+                                maxWidth: '85%',
+                                lineHeight: '1.7',
+                                whiteSpace: 'pre-wrap',
+                                fontSize: '1rem'
+                            }}>
+                                {/* AI 아이콘 표시 */}
+                                {!isUser && <div style={{ marginBottom: '8px', fontWeight: 'bold', color: '#e11d48' }}>✨ 답변</div>}
                                 {msg.text}
                             </div>
 
-                            {/* ★ 장소 캐러셀 (AI 메시지 & 장소 데이터 존재 시) */}
                             {!isUser && msg.places && msg.places.length > 0 && (
-                                <div style={{ width: '100%', marginTop: '12px' }}>
+                                <div style={{ width: '100%', marginTop: '16px' }}>
                                     <PlaceCarousel places={msg.places} onSelect={onApplyPlace} />
                                 </div>
                             )}
@@ -99,36 +84,18 @@ export const AiSummaryPanel: React.FC<Props> = ({ messages, onSearch, onApplyPla
                     );
                 })}
 
-                {/* 로딩 표시 */}
                 {isLoading && (
-                    <div
-                        style={{
-                            alignSelf: 'flex-start',
-                            backgroundColor: 'white',
-                            padding: '12px 20px',
-                            borderRadius: '20px',
-                            borderTopLeftRadius: '4px',
-                            border: '1px solid #fce7f3',
-                            boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                        }}
-                    >
-            <span className="animate-pulse" style={{ color: '#fb7185', fontWeight: 'bold' }}>
-              Thinking... 💭
-            </span>
+                    <div style={{ alignSelf: 'flex-start', padding: '10px' }}>
+                        <span className="animate-pulse" style={{ color: '#e11d48' }}>● ● ●</span>
                     </div>
                 )}
             </div>
 
-            {/* 입력창 영역 */}
-            <div
-                style={{
-                    padding: '16px 20px',
-                    backgroundColor: 'white',
-                    borderTop: '1px solid #fce7f3',
-                    flex: 'none'
-                }}
-            >
+            <div style={{ padding: '20px 10%', backgroundColor: 'white' }}>
                 <SearchBar onSearch={onSearch} isLoading={isLoading} />
+                <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                    AI는 실수를 할 수 있습니다. 중요한 정보는 확인해 주세요.
+                </div>
             </div>
         </div>
     );

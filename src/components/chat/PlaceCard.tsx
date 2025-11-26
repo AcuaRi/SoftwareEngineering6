@@ -1,7 +1,7 @@
 // src/components/chat/PlaceCard.tsx
 import React, { useState } from 'react';
 import { Place } from '../../types';
-import './PlaceCarousel.css'; // 스타일 공유
+import './PlaceCarousel.css';
 
 interface Props {
     place: Place;
@@ -9,58 +9,72 @@ interface Props {
 }
 
 export const PlaceCard: React.FC<Props> = ({ place, onSelect }) => {
-    // 현재 보고 있는 이미지의 인덱스 (기본값 0)
     const [imgIndex, setImgIndex] = useState(0);
+    const images = place.imageUrls || [];
+    const totalImages = images.length;
 
-    // 다음 이미지로 넘기기
     const nextImage = (e: React.MouseEvent) => {
-        e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
-        if (place.imageUrls && place.imageUrls.length > 0) {
-            setImgIndex((prev) => (prev + 1) % place.imageUrls.length);
+        e.stopPropagation();
+        if (totalImages > 0) {
+            setImgIndex((prev) => (prev + 1) % totalImages);
         }
     };
 
-    // 이전 이미지로 넘기기
     const prevImage = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (place.imageUrls && place.imageUrls.length > 0) {
-            setImgIndex((prev) => (prev - 1 + place.imageUrls.length) % place.imageUrls.length);
+        if (totalImages > 0) {
+            setImgIndex((prev) => (prev - 1 + totalImages) % totalImages);
         }
     };
 
-    // 현재 표시할 이미지 URL (데이터가 없으면 placeholder 사용)
-    const currentImageUrl = place.imageUrls && place.imageUrls.length > 0
-        ? place.imageUrls[imgIndex]
-        : 'https://via.placeholder.com/300x200?text=No+Image';
+    // 이미지별 클래스 결정 함수 (prev, active, next, hidden)
+    const getImageClass = (index: number) => {
+        if (index === imgIndex) return 'active';
 
-    const hasMultipleImages = place.imageUrls && place.imageUrls.length > 1;
+        // 3장 이상일 때 순환 구조 처리
+        const prevIndex = (imgIndex - 1 + totalImages) % totalImages;
+        const nextIndex = (imgIndex + 1) % totalImages;
+
+        if (index === prevIndex) return 'prev';
+        if (index === nextIndex) return 'next';
+
+        return 'hidden';
+    };
 
     return (
         <div className="place-card">
             {/* 이미지 슬라이더 영역 */}
             <div className="card-image-wrapper">
-                <img
-                    src={currentImageUrl}
-                    alt={place.name}
-                    className="card-image"
-                />
+                {images.length > 0 ? (
+                    images.map((url, idx) => (
+                        <img
+                            key={idx}
+                            src={url}
+                            alt={`${place.name} ${idx + 1}`}
+                            className={`slider-image ${getImageClass(idx)}`}
+                        />
+                    ))
+                ) : (
+                    <img
+                        src="https://via.placeholder.com/300x200?text=No+Image"
+                        alt="No Image"
+                        className="slider-image active"
+                    />
+                )}
 
-                {/* 카테고리 뱃지 */}
                 <span className="card-category">{place.category}</span>
 
-                {/* 좌우 화살표 (이미지가 2장 이상일 때만 표시) */}
-                {hasMultipleImages && (
+                {/* 네비게이션 (2장 이상일 때만) */}
+                {totalImages > 1 && (
                     <>
                         <button className="img-nav-btn prev" onClick={prevImage}>‹</button>
                         <button className="img-nav-btn next" onClick={nextImage}>›</button>
 
-                        {/* 하단 점(Dots) 인디케이터 */}
                         <div className="img-dots">
-                            {place.imageUrls.map((_, idx) => (
+                            {images.map((_, idx) => (
                                 <span
                                     key={idx}
                                     className={`dot ${idx === imgIndex ? 'active' : ''}`}
-                                    // 점을 클릭해도 해당 이미지로 이동 가능하게 하려면 추가
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setImgIndex(idx);
@@ -72,15 +86,12 @@ export const PlaceCard: React.FC<Props> = ({ place, onSelect }) => {
                 )}
             </div>
 
-            {/* 장소 정보 영역 */}
             <div className="card-content">
                 <div className="card-header">
                     <h3 className="card-title">{place.name}</h3>
                     <span className="card-rating">★ {place.rating}</span>
                 </div>
-
                 <p className="card-review">{place.reviewSummary}</p>
-
                 <button className="action-btn" onClick={() => onSelect(place)}>
                     지도에서 보기 📍
                 </button>
