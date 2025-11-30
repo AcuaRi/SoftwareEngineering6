@@ -13,7 +13,16 @@ import { KakaoMapViewer } from '../components/map/KakaoMapViewer'; // 모달 내
 import { useRecommendation } from '../hooks/useRecommendation';
 import { useChatStore } from '../hooks/useChatStore';
 import { Place, SavedPlace, Category } from '../types';
-import { fetchRoute, RouteResponse, RouteMode } from '../api/routeApi';
+import { fetchRoute, RouteResponse, RouteMode, RouteSummary } from '../api/routeApi';
+
+// 개별 경로 저장용 타입
+interface RouteEntry {
+    id: string;
+    startPlaceId: string;
+    endPlaceId: string;
+    mode: RouteMode;
+    summary: RouteSummary;
+}
 
 const MainPage: React.FC = () => {
     // 1. 훅 초기화
@@ -33,11 +42,12 @@ const MainPage: React.FC = () => {
     const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
     const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
 
-    // 4. 길찾기 관련 상태
+    // 4. 길찾기 관련 상태 (현재 선택된 경로 + 경로 히스토리)
     const [routeStartId, setRouteStartId] = useState<string | null>(null);
     const [routeEndId, setRouteEndId] = useState<string | null>(null);
     const [routeResult, setRouteResult] = useState<RouteResponse | null>(null);
     const [routeMode, setRouteMode] = useState<RouteMode>('car');
+    const [routes, setRoutes] = useState<RouteEntry[]>([]); // 여러 경로 적재
 
     // --- 헬퍼 함수 ---
 
@@ -89,6 +99,7 @@ const MainPage: React.FC = () => {
         setRouteResult(null);
         setRouteStartId(null);
         setRouteEndId(null);
+        setRoutes([]); // 경로 히스토리 초기화
     };
 
     // --- 핸들러: 장소 조작 (추가/삭제/선택) ---
@@ -148,12 +159,19 @@ const MainPage: React.FC = () => {
             prev.filter(sp => !(sp.placeId === placeId && sp.category === category))
         );
 
-        // 경로 설정에 쓰이던 장소가 삭제되면 경로 초기화
-        if (routeStartId?.includes(placeId)) {
-            setRouteStartId(null); setRouteResult(null);
+        // 이 장소를 포함하는 모든 경로 제거
+        setRoutes(prev =>
+            prev.filter(r => r.startPlaceId !== placeId && r.endPlaceId !== placeId)
+        );
+
+        // 현재 선택된 경로에 쓰이던 장소가 삭제되면 현재 경로 초기화
+        if (routeStartId && routeStartId === placeId) {
+            setRouteStartId(null);
+            setRouteResult(null);
         }
-        if (routeEndId?.includes(placeId)) {
-            setRouteEndId(null); setRouteResult(null);
+        if (routeEndId && routeEndId === placeId) {
+            setRouteEndId(null);
+            setRouteResult(null);
         }
     };
 
@@ -168,6 +186,24 @@ const MainPage: React.FC = () => {
                 console.log(`[MainPage] 경로 탐색 요청: ${start.name} -> ${end.name} (${mode})`);
                 const result = await fetchRoute(mode, start, end);
                 setRouteResult(result);
+
+                // 여러 경로 적재: 동일한 (start, end, mode)는 덮어쓰기
+                setRoutes(prev => {
+                    const id = `${start.id}-${end.id}-${mode}`;
+                    const filtered = prev.filter(
+                        r => !(r.startPlaceId === start.id && r.endPlaceId === end.id && r.mode === mode)
+                    );
+                    return [
+                        ...filtered,
+                        {
+                            id,
+                            startPlaceId: start.id,
+                            endPlaceId: end.id,
+                            mode,
+                            summary: result.summary
+                        }
+                    ];
+                });
             } catch (error) {
                 console.error("경로 탐색 실패:", error);
                 alert("경로를 찾을 수 없습니다.");
@@ -176,7 +212,6 @@ const MainPage: React.FC = () => {
     };
 
     const handleSetRouteStart = (placeId: string, category: Category) => {
-        // 식별자: 실제로는 category-id 조합이 더 안전할 수 있으나 편의상 placeId 사용
         setRouteStartId(placeId);
         if (routeEndId && placeId !== routeEndId) {
             requestRoute(placeId, routeEndId, routeMode);
@@ -233,7 +268,7 @@ const MainPage: React.FC = () => {
                 <div className="info-panel-content">
                     {/* 패널 헤더 */}
                     <div className="info-header">
-                        <span style={{fontWeight:'bold', color:'#334155'}}>지도 & 상세정보</span>
+                        <span style={{ fontWeight: 'bold', color: '#334155' }}>지도 & 상세정보</span>
                         <button className="close-btn" onClick={closeInfoPanel} title="패널 닫기">✖</button>
                     </div>
 
@@ -263,16 +298,13 @@ const MainPage: React.FC = () => {
                     <div className="right-bottom-panel">
                         <PlaceListPanel
                             places={displayedPlaces}
+                            savedPlaces={savedPlaces}
                             selectedPlaceId={selectedPlaceId}
                             onSelectPlace={handleSelectPlace}
-                            onRemovePlace={handleRemovePlace} // 삭제 핸들러
-
-                            savedPlaces={savedPlaces}
+                            onRemovePlace={handleRemovePlace}
 
                             routeMode={routeMode}
-                            routeInfo={routeResult ? routeResult.summary : null}
-                            routeStartPlace={getPlaceById(routeStartId)}
-                            routeEndPlace={getPlaceById(routeEndId)}
+                            routes={routes}
                             onChangeRouteMode={handleChangeRouteMode}
                         />
                     </div>
