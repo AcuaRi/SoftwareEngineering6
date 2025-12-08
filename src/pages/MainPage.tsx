@@ -67,15 +67,21 @@ const MainPage: React.FC = () => {
     };
 
     // --- 핸들러: 검색 및 채팅 ---
+    // src/pages/MainPage.tsx 내부 handleSearch 함수 수정
 
     const handleSearch = async (query: string) => {
-        // 1. 사용자 메시지 추가
+        // 1. 사용자 메시지 추가 (UI 즉시 반영)
         chatStore.addMessage({ role: 'user', text: query });
 
-        // 2. API 호출
-        const result = await searchPlaces(query);
+        // 2. API 호출 (현재 스토어에 있는 메시지들을 함께 전달)
+        // 주의: 방금 추가한 사용자 메시지는 아직 chatStore.currentMessages에 반영이 안 됐을 수 있으므로(비동기 State),
+        // 현재 메시지 목록에 방금 입력한 query를 임시로 붙여서 보내는 것이 가장 정확합니다.
+        const currentHistory = [...chatStore.currentMessages];
 
-        // 3. 결과 처리
+        // ★ 수정: query와 history를 함께 전달
+        const result = await searchPlaces(query, currentHistory);
+
+        // 3. 결과 처리 (기존 동일)
         if (result) {
             chatStore.addMessage({
                 role: 'assistant',
@@ -85,7 +91,7 @@ const MainPage: React.FC = () => {
         } else {
             chatStore.addMessage({
                 role: 'assistant',
-                text: "죄송합니다. 정보를 가져오는 중 오류가 발생했습니다."
+                text: "죄송합니다. 오류가 발생했습니다."
             });
         }
     };
