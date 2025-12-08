@@ -1,6 +1,39 @@
 // src/mocks/data.ts
 import { RecommendationResponse } from '../types';
 
+export const MOCK_RAW_BACKEND_DATA = {
+    "message": "SUCCESS: 성공적으로 추천 장소를 불러왔습니다.",
+    "places": [
+        {
+            "address": "",
+            "category": "ATTRACTION",
+            "id": 853,
+            "imageUrls": [
+                "https://dating-app-images-team6.s3.ap-northeast-2.amazonaws.com/3751337431270583148_1.webp"
+            ],
+            "latitude": 37.5133743,
+            "longitude": 127.0583148,
+            "name": "씨라이프 코엑스 아쿠아리움",
+            "rating": 0.0,
+            "reviewSummary": ""
+        },
+        {
+            "address": "",
+            "category": "ATTRACTION",
+            "id": 828,
+            "imageUrls": [
+                "https://dating-app-images-team6.s3.ap-northeast-2.amazonaws.com/3750759231270604816_1.jpg"
+            ],
+            "latitude": 37.5075923,
+            "longitude": 127.0604816,
+            "name": "마이아트뮤지엄",
+            "rating": 0.0,
+            "reviewSummary": ""
+        }
+    ],
+    "summary": `{\n    "추천 멘트": [\n        {\n            "장소": "씨라이프 코엑스 아쿠아리움",\n            "특징": "수중 터널을 따라 다양한 해양 생물을 감상할 수 있는 아쿠아리움",\n            "추천 멘트": "함께 신나는 수중 여행을 즐겨보세요! 다채로운 해양 생물들을 만나며 로맨틱한 분위기를 만들어봅시다."\n        },\n        {\n            "장소": "마이아트뮤지엄",\n            "특징": "다양한 예술 작품을 감상할 수 있는 미술관",\n            "추천 멘트": "예술의 세계로 함께 빠져들어요. 서로의 취향을 알아가며 작품 속에서 감정을 공유해봅시다."\n        }\n    ]\n}`
+};
+
 export const MOCK_RESPONSE_YONGSAN: RecommendationResponse = {
     summary: "용산구의 매력을 느낄 수 있는 핫플레이스들을 엄선했습니다. \n\n각 카드의 사진을 넘겨서(↔) 분위기를 미리 확인해보세요. 마음에 드는 장소의 '지도에서 보기 📍' 버튼을 누르면 위치를 확인할 수 있습니다!",
     places: [
@@ -81,3 +114,5 @@ export const MOCK_RESPONSE_YONGSAN: RecommendationResponse = {
         }
     ]
 };
+
+
