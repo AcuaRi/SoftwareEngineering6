@@ -9,6 +9,11 @@ interface RouteCard {
     endPlaceId: string;
     mode: RouteMode;
     summary: RouteSummary;
+    path: { lat: number; lng: number }[];
+    startLat: number;
+    startLng: number;
+    endLat: number;
+    endLng: number;
 }
 
 interface Props {
@@ -21,6 +26,9 @@ interface Props {
     routeMode: RouteMode;
     routes: RouteCard[];
     onChangeRouteMode: (mode: RouteMode) => void;
+
+    onRemoveRoute: (routeId: string) => void;
+    onSelectRoute: (routeId: string) => void;
 }
 
 export const PlaceListPanel: React.FC<Props> = ({
@@ -32,6 +40,8 @@ export const PlaceListPanel: React.FC<Props> = ({
     routeMode,
     routes,
     onChangeRouteMode,
+    onRemoveRoute,
+    onSelectRoute,
 }) => {
     const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
     const [activeTab, setActiveTab] = useState<'recommended' | 'saved' | 'route'>('recommended');
@@ -133,7 +143,7 @@ export const PlaceListPanel: React.FC<Props> = ({
         return base;
     };
 
-    // 이동 수단 선택 버튼
+    // 이동 수단 선택 버튼 (내부 지도에서는 자동차 기준)
     const renderRouteModeButtons = () => {
         const pillStyle = (mode: RouteMode) => ({
             padding: '6px 12px',
@@ -163,14 +173,7 @@ export const PlaceListPanel: React.FC<Props> = ({
                     onClick={() => onChangeRouteMode('car' as RouteMode)}
                     style={pillStyle('car' as RouteMode)}
                 >
-                    🚗 <span>자동차</span>
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onChangeRouteMode('walk' as RouteMode)}
-                    style={pillStyle('walk' as RouteMode)}
-                >
-                    🚶 <span>도보</span>
+                    🚗 <span>자동차 (내부 지도)</span>
                 </button>
                 <span
                     style={{
@@ -179,10 +182,30 @@ export const PlaceListPanel: React.FC<Props> = ({
                         color: '#9ca3af',
                     }}
                 >
-                    현재: <strong style={{ color: '#e11d48' }}>{String(routeMode)}</strong>
+                    현재:{' '}
+                    <strong style={{ color: '#e11d48' }}>
+                        {routeMode === 'car' ? '자동차' : String(routeMode)}
+                    </strong>
                 </span>
             </div>
         );
+    };
+
+    // ✅ Kakao Map 웹으로 도보/대중교통 길찾기 열기
+    const openKakaoRoute = (mode: 'walk' | 'traffic', route: RouteCard) => {
+        // 이름은 Place에서 가져오되, 없으면 기본값
+        const startPlace = findPlace(route.startPlaceId);
+        const endPlace = findPlace(route.endPlaceId);
+
+        const startName = startPlace?.name ?? '출발지';
+        const endName = endPlace?.name ?? '도착지';
+
+        const url =
+            `https://map.kakao.com/link/by/${mode}/` +
+            `${encodeURIComponent(startName)},${route.startLat},${route.startLng}/` +
+            `${encodeURIComponent(endName)},${route.endLat},${route.endLng}`;
+
+        window.open(url, '_blank');
     };
 
     return (
@@ -249,7 +272,7 @@ export const PlaceListPanel: React.FC<Props> = ({
                         cursor: 'pointer',
                     }}
                 >
-                    경로 안내
+                    경로 안내 ({routes.length})
                 </button>
             </div>
 
@@ -313,6 +336,7 @@ export const PlaceListPanel: React.FC<Props> = ({
                                 return (
                                     <div
                                         key={route.id}
+                                        onClick={() => onSelectRoute(route.id)} // 카드 클릭 → 해당 경로 지도에 표시
                                         style={{
                                             borderRadius: '14px',
                                             border: '1px solid #fee2e2',
@@ -324,8 +348,33 @@ export const PlaceListPanel: React.FC<Props> = ({
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: '6px',
+                                            position: 'relative',
+                                            cursor: 'pointer',
                                         }}
                                     >
+                                        {/* 경로 삭제 버튼 */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemoveRoute(route.id);
+                                            }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 8,
+                                                right: 8,
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#9ca3af',
+                                                fontSize: '1.1rem',
+                                                cursor: 'pointer',
+                                                padding: '4px',
+                                                lineHeight: 1,
+                                            }}
+                                            title="이 경로 삭제"
+                                        >
+                                            ✖
+                                        </button>
+
                                         <div
                                             style={{
                                                 display: 'flex',
@@ -400,15 +449,53 @@ export const PlaceListPanel: React.FC<Props> = ({
                                             {buildRouteSentence(route.summary)}
                                         </div>
 
+                                        {/* ✅ Kakao Map 외부 길찾기 버튼들 */}
                                         <div
                                             style={{
-                                                fontSize: '0.75rem',
-                                                color: '#9ca3af',
-                                                marginTop: '2px',
+                                                display: 'flex',
+                                                gap: '8px',
+                                                marginTop: '6px',
+                                                flexWrap: 'wrap',
                                             }}
                                         >
-                                            * 이 경로는 출발/도착 마커를 삭제하면 자동으로 목록에서
-                                            제거됩니다.
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openKakaoRoute('walk', route);
+                                                }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: '999px',
+                                                    border: '1px solid #d1d5db',
+                                                    backgroundColor: 'white',
+                                                    fontSize: '0.75rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                }}
+                                            >
+                                                🚶 카카오맵 도보 길찾기
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openKakaoRoute('traffic', route);
+                                                }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    borderRadius: '999px',
+                                                    border: '1px solid #d1d5db',
+                                                    backgroundColor: 'white',
+                                                    fontSize: '0.75rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                }}
+                                            >
+                                                🚌 카카오맵 대중교통 길찾기
+                                            </button>
                                         </div>
                                     </div>
                                 );
