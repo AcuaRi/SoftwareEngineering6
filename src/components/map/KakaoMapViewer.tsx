@@ -128,16 +128,9 @@ export const KakaoMapViewer: React.FC<Props> = ({
       {places.map((place, index) => {
         const saved = getSavedInfo(place.id);
 
-        /**
-         * ✅ 마커와 오버레이를 구분하는 로컬 ID
-         *    - place.id 가 중복이더라도 index 를 붙여서 항상 고유
-         */
+        // 마커/오버레이 고유 ID
         const markerId = `${place.id}-${index}`;
         const markerKey = `${markerId}-${saved ? 'saved' : 'normal'}`;
-
-        const fullKey = saved ? `${saved.category}-${place.id}` : null;
-        const isStart = fullKey === routeStartId;
-        const isEnd = fullKey === routeEndId;
 
         const img = saved
           ? {
