@@ -30,6 +30,16 @@ interface RouteEntry {
   endLng: number;
 }
 
+/**
+ * ✅ 프론트 전용 "고유 장소 키"
+ *    - 원래 place.id 가 중복일 수 있어서,
+ *      id + 위도 + 경도 기반으로 유니크 키를 만든다.
+ */
+const makePlaceKey = (place: Place): string => {
+  const baseId = place.id ?? 'noid';
+  return `${baseId}_${place.latitude}_${place.longitude}`;
+};
+
 const MainPage: React.FC = () => {
   // 1. 훅 초기화
   // API 호출 담당 (데이터 상태 관리 X)
@@ -45,10 +55,12 @@ const MainPage: React.FC = () => {
 
   // 3. 데이터 상태 (지도/리스트 표시용)
   const [displayedPlaces, setDisplayedPlaces] = useState<Place[]>([]);
+  // ⚠️ 여기서의 selectedPlaceId는 "makePlaceKey"로 만든 키를 저장한다
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
 
   // 4. 길찾기 관련 상태 (현재 선택된 경로 + 경로 히스토리)
+  // ⚠️ routeStartId / routeEndId 역시 "makePlaceKey"로 만든 키를 사용한다
   const [routeStartId, setRouteStartId] = useState<string | null>(null);
   const [routeEndId, setRouteEndId] = useState<string | null>(null);
   const [routeResult, setRouteResult] = useState<RouteResponse | null>(null);
@@ -58,15 +70,15 @@ const MainPage: React.FC = () => {
 
   // --- 헬퍼 함수 ---
 
-  // ID로 장소 객체 찾기 (화면에 있는 장소 + 저장된 장소 모두 검색)
+  // ID(=makePlaceKey)로 장소 객체 찾기 (화면에 있는 장소 + 저장된 장소 모두 검색)
   const getPlaceById = (id: string | null): Place | null => {
     if (!id) return null;
 
     // 현재 리스트에 있는 장소 우선 검색
-    const inDisplay = displayedPlaces.find((p) => p.id === id);
+    const inDisplay = displayedPlaces.find((p) => makePlaceKey(p) === id);
     if (inDisplay) return inDisplay;
 
-    // 저장된 장소 검색
+    // 저장된 장소 검색 (SavedPlace.placeId 역시 makePlaceKey 기반)
     const inSaved = savedPlaces.find((sp) => sp.placeId === id);
     if (inSaved) return inSaved.place;
 
@@ -82,7 +94,7 @@ const MainPage: React.FC = () => {
     // 2. API 호출 (현재 스토어에 있는 메시지들을 함께 전달)
     const currentHistory = [...chatStore.currentMessages];
 
-    // ★ query와 history를 함께 전달 (동료분 버전 유지)
+    // ★ query와 history를 함께 전달
     const result = await searchPlaces(query, currentHistory);
 
     // 3. 결과 처리
@@ -115,17 +127,32 @@ const MainPage: React.FC = () => {
 
   // --- 핸들러: 장소 조작 (추가/삭제/선택) ---
 
-  // [캐러셀]에서 '이 장소들 모두 지도에 표시' 또는 개별 장소 클릭 시
+  /**
+   * [캐러셀]에서 '이 장소들 모두 지도에 표시' 또는 개별 장소 클릭 시
+   * - AI / 백엔드에서 준 Place는 id가 중복일 수 있으므로,
+   *   여기서 프론트 전용 고유 id로 한 번 변환해서 저장한다.
+   */
   const handleApplyPlaces = (places: Place[]) => {
     setDisplayedPlaces((prev) => {
-      // 중복되지 않은 새 장소만 추가 (Append 방식)
-      const newPlaces = places.filter((p) => !prev.some((existing) => existing.id === p.id));
+      // 1) 새로 들어온 장소들을 "id 교체"한 사본으로 만든다
+      const normalizedNew = places.map((p) => ({
+        ...p,
+        id: makePlaceKey(p),
+      }));
+
+      // 2) 이미 표시 중인 장소들의 id 집합
+      const existingIds = new Set(prev.map((p) => p.id));
+
+      // 3) 중복되지 않는 것만 추가
+      const newPlaces = normalizedNew.filter((p) => !existingIds.has(p.id));
+
       return [...prev, ...newPlaces];
     });
 
-    // 첫 번째 장소 하이라이트
+    // 첫 번째 장소를 선택 상태로
     if (places.length > 0) {
-      setSelectedPlaceId(places[0].id);
+      const firstKey = makePlaceKey(places[0]);
+      setSelectedPlaceId(firstKey);
     }
 
     // 우측 정보 패널 열기
@@ -151,16 +178,20 @@ const MainPage: React.FC = () => {
   // --- 핸들러: 저장(북마크) 관리 ---
 
   const handleSavePlace = (place: Place, category: Category) => {
+    const placeKey = makePlaceKey(place);
+
     setSavedPlaces((prev) => {
-      // 중복 저장 방지
-      const exists = prev.some((sp) => sp.placeId === place.id && sp.category === category);
+      // 중복 저장 방지 (같은 장소 + 같은 카테고리)
+      const exists = prev.some(
+        (sp) => sp.placeId === placeKey && sp.category === category,
+      );
       if (exists) return prev;
 
       return [
         ...prev,
         {
-          placeId: place.id,
-          place,
+          placeId: placeKey,
+          place: { ...place, id: placeKey }, // place 내부 id도 키로 통일
           category,
           savedAt: Date.now(),
         },
@@ -170,10 +201,10 @@ const MainPage: React.FC = () => {
 
   const handleRemoveSavedPlace = (placeId: string, category: Category) => {
     setSavedPlaces((prev) =>
-      prev.filter((sp) => !(sp.placeId === placeId && sp.category === category)),
+      prev.filter(
+        (sp) => !(sp.placeId === placeId && sp.category === category),
+      ),
     );
-
-    // ✅ 경로 히스토리는 더 이상 자동으로 지우지 않음 (요구사항: 경로는 Route 탭에서 직접 삭제)
 
     // 현재 선택 중이던 출발/도착지에 해당하면 선택만 초기화
     if (routeStartId && routeStartId === placeId) {
@@ -190,13 +221,19 @@ const MainPage: React.FC = () => {
 
   // --- 핸들러: 길찾기 ---
 
-  const requestRoute = async (startId: string, endId: string, mode: RouteMode) => {
+  const requestRoute = async (
+    startId: string,
+    endId: string,
+    mode: RouteMode,
+  ) => {
     const start = getPlaceById(startId);
     const end = getPlaceById(endId);
 
     if (start && end) {
       try {
-        console.log(`[MainPage] 경로 탐색 요청: ${start.name} -> ${end.name} (${mode})`);
+        console.log(
+          `[MainPage] 경로 탐색 요청: ${start.name} -> ${end.name} (${mode})`,
+        );
         const result = await fetchRoute(mode, start, end);
 
         // 내부 지도에 표시할 현재 경로
@@ -208,12 +245,12 @@ const MainPage: React.FC = () => {
 
         // 여러 경로 적재: 동일한 (start, end, mode)는 덮어쓰기
         setRoutes((prev) => {
-          const id = `${start.id}-${end.id}-${mode}`;
+          const id = `${makePlaceKey(start)}-${makePlaceKey(end)}-${mode}`;
 
           const baseEntry: RouteEntry = {
             id,
-            startPlaceId: start.id,
-            endPlaceId: end.id,
+            startPlaceId: makePlaceKey(start),
+            endPlaceId: makePlaceKey(end),
             mode,
             summary: result.summary,
             path: result.path,
@@ -226,8 +263,8 @@ const MainPage: React.FC = () => {
           const filtered = prev.filter(
             (r) =>
               !(
-                r.startPlaceId === start.id &&
-                r.endPlaceId === end.id &&
+                r.startPlaceId === baseEntry.startPlaceId &&
+                r.endPlaceId === baseEntry.endPlaceId &&
                 r.mode === mode
               ),
           );
@@ -237,7 +274,9 @@ const MainPage: React.FC = () => {
         });
 
         // 이 경로를 현재 활성 경로로 표시
-        setActiveRouteId(`${start.id}-${end.id}-${mode}`);
+        setActiveRouteId(
+          `${makePlaceKey(start)}-${makePlaceKey(end)}-${mode}`,
+        );
 
         // ✅ 한 번 쌍이 만들어졌으니 출발/도착 선택 상태 flush
         setRouteStartId(null);
@@ -250,6 +289,7 @@ const MainPage: React.FC = () => {
   };
 
   const handleSetRouteStart = (placeId: string, category: Category) => {
+    // placeId는 이미 makePlaceKey 기반의 값이라고 가정
     setRouteStartId(placeId);
     if (routeEndId && placeId !== routeEndId) {
       requestRoute(placeId, routeEndId, routeMode);
@@ -264,8 +304,6 @@ const MainPage: React.FC = () => {
   };
 
   const handleChangeRouteMode = (mode: RouteMode) => {
-    // 현재 설계에서는 내부 지도용 모드는 자동차만 사용하지만,
-    // 타입은 RouteMode 그대로 유지
     setRouteMode(mode);
 
     // 이미 출발/도착이 선택된 상태에서 모드 변경 시 다시 요청
@@ -310,8 +348,6 @@ const MainPage: React.FC = () => {
         onNewChat={handleNewChat}
         onSelectChat={(id) => {
           chatStore.selectSession(id);
-          // 대화방 변경 시 우측 패널 닫기 (필요하면 주석 해제)
-          // setIsInfoPanelOpen(false);
         }}
         onDeleteChat={chatStore.deleteSession}
       />
@@ -332,8 +368,14 @@ const MainPage: React.FC = () => {
         <div className="info-panel-content">
           {/* 패널 헤더 */}
           <div className="info-header">
-            <span style={{ fontWeight: 'bold', color: '#334155' }}>지도 & 상세정보</span>
-            <button className="close-btn" onClick={closeInfoPanel} title="패널 닫기">
+            <span style={{ fontWeight: 'bold', color: '#334155' }}>
+              지도 & 상세정보
+            </span>
+            <button
+              className="close-btn"
+              onClick={closeInfoPanel}
+              title="패널 닫기"
+            >
               ✖
             </button>
           </div>

@@ -1,3 +1,4 @@
+// src/components/map/KakaoMapViewer.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Map,
@@ -59,14 +60,10 @@ export const KakaoMapViewer: React.FC<Props> = ({
 
   const mapRef = useRef<kakao.maps.Map | null>(null);
 
-  /**
-   * ✅ 마커 선택 상태를 "place.id"가 아니라
-   *    "마커의 로컬 고유 ID(인덱스 기반)"로 관리
-   *    → 동일한 place.id 를 가진 장소가 여러 개 있어도
-   *      한 번에 하나의 마커만 오버레이가 뜬다.
-   */
+  // ✅ 각 마커에 대한 로컬 선택 상태
   const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
 
+  // 선택된 placeId가 바뀌면 해당 장소로 센터 이동
   useEffect(() => {
     if (!selectedPlaceId || places.length === 0) return;
     const p = places.find((pl) => pl.id === selectedPlaceId);
@@ -75,6 +72,7 @@ export const KakaoMapViewer: React.FC<Props> = ({
     setCenter({ lat: p.latitude, lng: p.longitude });
   }, [selectedPlaceId, places]);
 
+  // places 전체가 바뀌면 bounds 재설정
   useEffect(() => {
     if (places.length === 0 || !mapRef.current) return;
 
@@ -86,6 +84,7 @@ export const KakaoMapViewer: React.FC<Props> = ({
     mapRef.current.setBounds(bounds);
   }, [places]);
 
+  // 저장된 장소 정보 (카테고리, 순번, 색상)
   const getSavedInfo = (placeId: string) => {
     const saved = savedPlaces.find((p) => p.placeId === placeId);
     if (!saved) return null;
@@ -131,12 +130,11 @@ export const KakaoMapViewer: React.FC<Props> = ({
 
         /**
          * ✅ 마커와 오버레이를 구분하는 로컬 ID
-         *    - place.id 가 중복이어도 index 로 항상 유일
+         *    - place.id 가 중복이더라도 index 를 붙여서 항상 고유
          */
         const markerId = `${place.id}-${index}`;
         const markerKey = `${markerId}-${saved ? 'saved' : 'normal'}`;
 
-        // (start/end는 현재 스타일링에 쓰이지 않지만, 필요하면 확장용으로 둠)
         const fullKey = saved ? `${saved.category}-${place.id}` : null;
         const isStart = fullKey === routeStartId;
         const isEnd = fullKey === routeEndId;
@@ -156,7 +154,9 @@ export const KakaoMapViewer: React.FC<Props> = ({
               position={{ lat: place.latitude, lng: place.longitude }}
               onClick={() => {
                 onSelectPlace(place.id);
-                setActiveMarkerId((prev) => (prev === markerId ? null : markerId));
+                setActiveMarkerId((prev) =>
+                  prev === markerId ? null : markerId,
+                );
               }}
               clickable={true}
               image={img}
