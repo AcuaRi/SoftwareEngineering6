@@ -31,9 +31,9 @@ interface RouteEntry {
 }
 
 /**
- * ✅ 프론트 전용 "고유 장소 키"
- *    - 백엔드/AI에서 오는 place.id 가 중복될 수 있으므로
- *      id + 위도 + 경도 기반으로 유니크 키를 한 번만 만들어 사용한다.
+ * 프론트 전용 고유 장소 키
+ *  - 백엔드/AI에서 오는 place.id 가 중복될 수 있으므로
+ *    id + 위도 + 경도 기반으로 한 번만 생성해서 끝까지 사용
  */
 const makePlaceKey = (place: Place): string => {
   const baseId = place.id ?? 'noid';
@@ -63,13 +63,12 @@ const MainPage: React.FC = () => {
   const [routes, setRoutes] = useState<RouteEntry[]>([]);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
 
-  // 5. 🔧 드래그 리사이즈 상태 (AiSummary vs Info 패널 비율)
-  //   - centerWidth: info 패널이 열려 있을 때 AiSummaryPanel 이 차지하는 비율 (%)
-  const [centerWidth, setCenterWidth] = useState<number>(55); // 기본 55 : 45
+  // 5. AiSummary vs Info 패널 가로 비율 (드래그로 조절)
+  const [centerWidth, setCenterWidth] = useState<number>(55); // 기본: 왼쪽 55%, 오른쪽 45%
   const [isResizing, setIsResizing] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
 
-  // 전역 마우스 이벤트로 드래그 처리
+  // 전역 마우스 드래그 이벤트
   useEffect(() => {
     if (!isResizing) return;
 
@@ -77,20 +76,16 @@ const MainPage: React.FC = () => {
       if (!bodyRef.current) return;
       const rect = bodyRef.current.getBoundingClientRect();
       const relativeX = e.clientX - rect.left;
-
-      // bodyRef 영역 기준으로 왼쪽 영역 비율 계산
       let newPercent = (relativeX / rect.width) * 100;
 
-      // 너무 극단적인 비율은 방지 (25% ~ 75%)
+      // 너무 극단적인 비율 방지
       if (newPercent < 25) newPercent = 25;
       if (newPercent > 75) newPercent = 75;
 
       setCenterWidth(newPercent);
     };
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+    const handleMouseUp = () => setIsResizing(false);
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -109,18 +104,14 @@ const MainPage: React.FC = () => {
   const getPlaceById = (id: string | null): Place | null => {
     if (!id) return null;
 
-    // 1) 현재 화면에 표시된 장소 중에서
     const inDisplay = displayedPlaces.find((p) => p.id === id);
     if (inDisplay) return inDisplay;
 
-    // 2) 저장된 장소들 중에서
     const inSaved = savedPlaces.find((sp) => sp.placeId === id);
-    if (inSaved) return inSaved.place;
-
-    return null;
+    return inSaved ? inSaved.place : null;
   };
 
-  // --- 핸들러: 검색 & 채팅 ---
+  // --- 검색 & 채팅 ---
 
   const handleSearch = async (query: string) => {
     chatStore.addMessage({ role: 'user', text: query });
@@ -154,12 +145,8 @@ const MainPage: React.FC = () => {
     setActiveRouteId(null);
   };
 
-  // --- 핸들러: 장소 표시/선택/삭제 ---
+  // --- 장소 표시/선택/삭제 ---
 
-  /**
-   * 캐러셀에서 "이 장소들 모두 지도에 표시하기" 또는 개별 장소 클릭 시
-   * - 이 시점에서만 makePlaceKey로 id를 유일하게 만든다.
-   */
   const handleApplyPlaces = (places: Place[]) => {
     const normalizedNew = places.map((p) => ({
       ...p,
@@ -192,11 +179,10 @@ const MainPage: React.FC = () => {
     setSelectedPlaceId(id);
   };
 
-  // --- 핸들러: 저장(북마크) 관리 ---
+  // --- 저장(북마크) 관리 ---
 
   const handleSavePlace = (place: Place, category: Category) => {
-    // place.id 는 이미 makePlaceKey 로 normalize 된 상태라고 가정
-    const placeKey = place.id;
+    const placeKey = place.id; // 이미 makePlaceKey 로 정규화된 상태
 
     setSavedPlaces((prev) => {
       const exists = prev.some(
@@ -235,7 +221,7 @@ const MainPage: React.FC = () => {
     }
   };
 
-  // --- 핸들러: 길찾기 ---
+  // --- 길찾기 ---
 
   const requestRoute = async (
     startId: string,
@@ -245,56 +231,54 @@ const MainPage: React.FC = () => {
     const start = getPlaceById(startId);
     const end = getPlaceById(endId);
 
-    if (start && end) {
-      try {
-        console.log(
-          `[MainPage] 경로 탐색 요청: ${start.name} -> ${end.name} (${mode})`,
-        );
-        const result = await fetchRoute(mode, start, end);
+    if (!start || !end) return;
 
-        const routeResponse: RouteResponse = {
-          path: result.path,
+    try {
+      console.log(
+        `[MainPage] 경로 탐색 요청: ${start.name} -> ${end.name} (${mode})`,
+      );
+      const result = await fetchRoute(mode, start, end);
+
+      const routeResponse: RouteResponse = {
+        path: result.path,
+        summary: result.summary,
+      };
+      setRouteResult(routeResponse);
+
+      setRoutes((prev) => {
+        const id = `${start.id}-${end.id}-${mode}`;
+
+        const baseEntry: RouteEntry = {
+          id,
+          startPlaceId: start.id,
+          endPlaceId: end.id,
+          mode,
           summary: result.summary,
+          path: result.path,
+          startLat: start.latitude,
+          startLng: start.longitude,
+          endLat: end.latitude,
+          endLng: end.longitude,
         };
-        setRouteResult(routeResponse);
 
-        setRoutes((prev) => {
-          const id = `${start.id}-${end.id}-${mode}`;
+        const filtered = prev.filter(
+          (r) =>
+            !(
+              r.startPlaceId === baseEntry.startPlaceId &&
+              r.endPlaceId === baseEntry.endPlaceId &&
+              r.mode === mode
+            ),
+        );
 
-          const baseEntry: RouteEntry = {
-            id,
-            startPlaceId: start.id,
-            endPlaceId: end.id,
-            mode,
-            summary: result.summary,
-            path: result.path,
-            startLat: start.latitude,
-            startLng: start.longitude,
-            endLat: end.latitude,
-            endLng: end.longitude,
-          };
+        return [...filtered, baseEntry];
+      });
 
-          const filtered = prev.filter(
-            (r) =>
-              !(
-                r.startPlaceId === baseEntry.startPlaceId &&
-                r.endPlaceId === baseEntry.endPlaceId &&
-                r.mode === mode
-              ),
-          );
-
-          const nextRoutes = [...filtered, baseEntry];
-          return nextRoutes;
-        });
-
-        setActiveRouteId(`${start.id}-${end.id}-${mode}`);
-
-        setRouteStartId(null);
-        setRouteEndId(null);
-      } catch (error) {
-        console.error('경로 탐색 실패:', error);
-        alert('경로를 찾을 수 없습니다.');
-      }
+      setActiveRouteId(`${start.id}-${end.id}-${mode}`);
+      setRouteStartId(null);
+      setRouteEndId(null);
+    } catch (error) {
+      console.error('경로 탐색 실패:', error);
+      alert('경로를 찾을 수 없습니다.');
     }
   };
 
@@ -319,11 +303,10 @@ const MainPage: React.FC = () => {
     }
   };
 
-  // --- 핸들러: 경로 삭제 & 선택 ---
+  // --- 경로 삭제 & 선택 ---
 
   const handleRemoveRoute = (routeId: string) => {
     setRoutes((prev) => prev.filter((r) => r.id !== routeId));
-
     if (activeRouteId === routeId) {
       setActiveRouteId(null);
       setRouteResult(null);
@@ -347,7 +330,7 @@ const MainPage: React.FC = () => {
 
   return (
     <div className="main-container">
-      {/* 1. 좌측 사이드바 */}
+      {/* 좌측 사이드바 */}
       <Sidebar
         isOpen={isSidebarOpen}
         sessions={chatStore.sessions}
@@ -359,7 +342,7 @@ const MainPage: React.FC = () => {
         onDeleteChat={chatStore.deleteSession}
       />
 
-      {/* 2. 중앙(AI) + 우측(지도/리스트) 를 감싸는 영역 */}
+      {/* 중앙(AI) + 우측(지도/리스트) 전체 래퍼 */}
       <div
         ref={bodyRef}
         style={{
@@ -378,10 +361,12 @@ const MainPage: React.FC = () => {
                   flexBasis: `${centerWidth}%`,
                   flexShrink: 0,
                   flexGrow: 0,
+                  minWidth: 0,
                 }
               : {
                   flex: 1,
                   flexBasis: 'auto',
+                  minWidth: 0,
                 }
           }
         >
@@ -409,7 +394,7 @@ const MainPage: React.FC = () => {
           />
         )}
 
-        {/* 우측 정보 패널 (지도 + 리스트) */}
+        {/* 우측 정보 패널 */}
         {isInfoPanelOpen && (
           <div
             className="info-panel-wrapper open"
@@ -418,10 +403,22 @@ const MainPage: React.FC = () => {
               flexShrink: 0,
               flexGrow: 0,
               display: 'flex',
+              width: 'auto',
+              maxWidth: '100%',
+              minWidth: 0,
             }}
           >
-            <div className="info-panel-content">
-              {/* 패널 헤더 */}
+            <div
+              className="info-panel-content"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                height: '100%',
+                minWidth: 0,
+              }}
+            >
+              {/* 헤더 */}
               <div className="info-header">
                 <span style={{ fontWeight: 'bold', color: '#334155' }}>
                   지도 & 상세정보
@@ -435,8 +432,11 @@ const MainPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* 상단: 지도 패널 */}
-              <div className="right-top-panel">
+              {/* 상단: 지도 */}
+              <div
+                className="right-top-panel"
+                style={{ width: '100%', minWidth: 0 }}
+              >
                 <MapPanel
                   places={displayedPlaces}
                   selectedPlaceId={selectedPlaceId}
@@ -453,8 +453,11 @@ const MainPage: React.FC = () => {
                 />
               </div>
 
-              {/* 하단: 리스트 패널 */}
-              <div className="right-bottom-panel">
+              {/* 하단: 리스트 */}
+              <div
+                className="right-bottom-panel"
+                style={{ width: '100%', minWidth: 0 }}
+              >
                 <PlaceListPanel
                   places={displayedPlaces}
                   savedPlaces={savedPlaces}
@@ -473,7 +476,7 @@ const MainPage: React.FC = () => {
         )}
       </div>
 
-      {/* 3. 지도 확장 모달 */}
+      {/* 지도 확장 모달 */}
       <Modal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)}>
         <div style={{ width: '100%', height: '100%' }}>
           <KakaoMapViewer
@@ -496,3 +499,4 @@ const MainPage: React.FC = () => {
 };
 
 export default MainPage;
+
