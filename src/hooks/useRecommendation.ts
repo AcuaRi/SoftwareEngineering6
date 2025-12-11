@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getRecommendation } from '../api/recommendationApi'; // 실제 API
-// import { getMockRecommendation } from '../api/mockRecommendationApi'; // (테스트용)
+import { getMockRecommendation } from '../api/mockRecommendationApi'; // (테스트용)
 import { ChatMessage } from '../types';
 
 export const useRecommendation = () => {
@@ -29,6 +29,10 @@ export const useRecommendation = () => {
 
             // 백엔드로 전송 (현재 질문 + 정제된 과거 기록)
             const result = await getRecommendation(query, recentHistory);
+            //console.log(query);
+            //console.log(recentHistory);
+            //const result = await getMockRecommendation(query, recentHistory);
+
 
             return result;
         } catch (err: any) {
