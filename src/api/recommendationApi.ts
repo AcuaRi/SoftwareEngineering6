@@ -100,7 +100,8 @@ export const getRecommendation = async (
                 : ["https://via.placeholder.com/300x200?text=No+Image"] // 이미지 없으면 기본 이미지
         }));
 
-        const adaptedSummary = parseSummary(backendData.summary);
+        //const adaptedSummary = parseSummary(backendData.summary);
+        const adaptedSummary = backendData.summary;
 
         return {
             summary: adaptedSummary,

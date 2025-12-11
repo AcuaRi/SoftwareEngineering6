@@ -89,7 +89,9 @@ export const PlaceCard: React.FC<Props> = ({ place, onSelect }) => {
             <div className="card-content">
                 <div className="card-header">
                     <h3 className="card-title">{place.name}</h3>
-                    <span className="card-rating">★ {place.rating}</span>
+                    <span className="card-rating">
+                        ★ {place.rating ? Number(place.rating).toFixed(1) : "0.0"}
+                    </span>
                 </div>
                 <p className="card-review">{place.reviewSummary}</p>
                 <button className="action-btn" onClick={() => onSelect(place)}>

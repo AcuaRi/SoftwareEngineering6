@@ -602,7 +602,7 @@ export const PlaceListPanel: React.FC<Props> = ({
                                                     fontWeight: 'bold',
                                                 }}
                                             >
-                                                ★ {place.rating}
+                                                ★ {place.rating ? Number(place.rating).toFixed(1) : "0.0"}
                                             </span>
                                         </div>
 
