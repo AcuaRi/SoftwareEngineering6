@@ -1,5 +1,5 @@
 // src/pages/MainPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './MainPage.css';
 
 // 컴포넌트 임포트
@@ -52,7 +52,6 @@ const MainPage: React.FC = () => {
 
   // 3. 데이터 상태
   const [displayedPlaces, setDisplayedPlaces] = useState<Place[]>([]);
-  // ✅ 여기서 쓰는 id는 전부 makePlaceKey로 한 번 변환된 값
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
 
@@ -63,6 +62,48 @@ const MainPage: React.FC = () => {
   const [routeMode, setRouteMode] = useState<RouteMode>('car');
   const [routes, setRoutes] = useState<RouteEntry[]>([]);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
+
+  // 5. 🔧 드래그 리사이즈 상태 (AiSummary vs Info 패널 비율)
+  //   - centerWidth: info 패널이 열려 있을 때 AiSummaryPanel 이 차지하는 비율 (%)
+  const [centerWidth, setCenterWidth] = useState<number>(55); // 기본 55 : 45
+  const [isResizing, setIsResizing] = useState(false);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+
+  // 전역 마우스 이벤트로 드래그 처리
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!bodyRef.current) return;
+      const rect = bodyRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+
+      // bodyRef 영역 기준으로 왼쪽 영역 비율 계산
+      let newPercent = (relativeX / rect.width) * 100;
+
+      // 너무 극단적인 비율은 방지 (25% ~ 75%)
+      if (newPercent < 25) newPercent = 25;
+      if (newPercent > 75) newPercent = 75;
+
+      setCenterWidth(newPercent);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
 
   // --- 헬퍼: ID 기반 Place 찾기 ---
   const getPlaceById = (id: string | null): Place | null => {
@@ -120,7 +161,6 @@ const MainPage: React.FC = () => {
    * - 이 시점에서만 makePlaceKey로 id를 유일하게 만든다.
    */
   const handleApplyPlaces = (places: Place[]) => {
-    // 한 번 normalize 해두고
     const normalizedNew = places.map((p) => ({
       ...p,
       id: makePlaceKey(p),
@@ -132,7 +172,6 @@ const MainPage: React.FC = () => {
       return [...prev, ...onlyNew];
     });
 
-    // 첫 번째 장소를 선택 상태로
     if (normalizedNew.length > 0) {
       setSelectedPlaceId(normalizedNew[0].id);
     }
@@ -156,11 +195,10 @@ const MainPage: React.FC = () => {
   // --- 핸들러: 저장(북마크) 관리 ---
 
   const handleSavePlace = (place: Place, category: Category) => {
-    // ✅ place.id 는 이미 makePlaceKey 로 normalize 된 상태라고 가정
+    // place.id 는 이미 makePlaceKey 로 normalize 된 상태라고 가정
     const placeKey = place.id;
 
     setSavedPlaces((prev) => {
-      // 같은 장소+카테고리면 중복 저장 방지
       const exists = prev.some(
         (sp) => sp.placeId === placeKey && sp.category === category,
       );
@@ -170,7 +208,7 @@ const MainPage: React.FC = () => {
         ...prev,
         {
           placeId: placeKey,
-          place: { ...place }, // id 그대로 유지
+          place: { ...place },
           category,
           savedAt: Date.now(),
         },
@@ -321,70 +359,121 @@ const MainPage: React.FC = () => {
         onDeleteChat={chatStore.deleteSession}
       />
 
-      {/* 2. 중앙 AI 대화 패널 */}
-      <div className="center-panel">
-        <AiSummaryPanel
-          messages={chatStore.currentMessages}
-          onSearch={handleSearch}
-          onApplyPlaces={handleApplyPlaces}
-          isLoading={isLoading}
-          onToggleSidebar={toggleSidebar}
-        />
-      </div>
-
-      {/* 3. 우측 정보 패널 */}
-      <div className={`info-panel-wrapper ${isInfoPanelOpen ? 'open' : ''}`}>
-        <div className="info-panel-content">
-          <div className="info-header">
-            <span style={{ fontWeight: 'bold', color: '#334155' }}>
-              지도 & 상세정보
-            </span>
-            <button
-              className="close-btn"
-              onClick={closeInfoPanel}
-              title="패널 닫기"
-            >
-              ✖
-            </button>
-          </div>
-
-          {/* 상단: 지도 */}
-          <div className="right-top-panel">
-            <MapPanel
-              places={displayedPlaces}
-              selectedPlaceId={selectedPlaceId}
-              onSelectPlace={handleSelectPlace}
-              routePath={routeResult?.path}
-              savedPlaces={savedPlaces}
-              routeStartId={routeStartId}
-              routeEndId={routeEndId}
-              onSavePlace={handleSavePlace}
-              onRemoveSavedPlace={handleRemoveSavedPlace}
-              onSetRouteStart={handleSetRouteStart}
-              onSetRouteEnd={handleSetRouteEnd}
-              onExpand={() => setIsMapModalOpen(true)}
-            />
-          </div>
-
-          {/* 하단: 리스트 */}
-          <div className="right-bottom-panel">
-            <PlaceListPanel
-              places={displayedPlaces}
-              savedPlaces={savedPlaces}
-              selectedPlaceId={selectedPlaceId}
-              onSelectPlace={handleSelectPlace}
-              onRemovePlace={handleRemovePlace}
-              routeMode={routeMode}
-              routes={routes}
-              onChangeRouteMode={handleChangeRouteMode}
-              onRemoveRoute={handleRemoveRoute}
-              onSelectRoute={handleSelectRoute}
-            />
-          </div>
+      {/* 2. 중앙(AI) + 우측(지도/리스트) 를 감싸는 영역 */}
+      <div
+        ref={bodyRef}
+        style={{
+          display: 'flex',
+          flex: 1,
+          height: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        {/* 중앙 AI 패널 */}
+        <div
+          className="center-panel"
+          style={
+            isInfoPanelOpen
+              ? {
+                  flexBasis: `${centerWidth}%`,
+                  flexShrink: 0,
+                  flexGrow: 0,
+                }
+              : {
+                  flex: 1,
+                  flexBasis: 'auto',
+                }
+          }
+        >
+          <AiSummaryPanel
+            messages={chatStore.currentMessages}
+            onSearch={handleSearch}
+            onApplyPlaces={handleApplyPlaces}
+            isLoading={isLoading}
+            onToggleSidebar={toggleSidebar}
+          />
         </div>
+
+        {/* 가운데 리사이즈 바 (info 패널 열려 있을 때만 표시) */}
+        {isInfoPanelOpen && (
+          <div
+            onMouseDown={handleDragStart}
+            style={{
+              width: '6px',
+              cursor: 'col-resize',
+              backgroundColor: isResizing ? '#f97373' : '#e5e7eb',
+              alignSelf: 'stretch',
+              flexShrink: 0,
+            }}
+            title="패널 너비 조절"
+          />
+        )}
+
+        {/* 우측 정보 패널 (지도 + 리스트) */}
+        {isInfoPanelOpen && (
+          <div
+            className="info-panel-wrapper open"
+            style={{
+              flexBasis: `${100 - centerWidth}%`,
+              flexShrink: 0,
+              flexGrow: 0,
+              display: 'flex',
+            }}
+          >
+            <div className="info-panel-content">
+              {/* 패널 헤더 */}
+              <div className="info-header">
+                <span style={{ fontWeight: 'bold', color: '#334155' }}>
+                  지도 & 상세정보
+                </span>
+                <button
+                  className="close-btn"
+                  onClick={closeInfoPanel}
+                  title="패널 닫기"
+                >
+                  ✖
+                </button>
+              </div>
+
+              {/* 상단: 지도 패널 */}
+              <div className="right-top-panel">
+                <MapPanel
+                  places={displayedPlaces}
+                  selectedPlaceId={selectedPlaceId}
+                  onSelectPlace={handleSelectPlace}
+                  routePath={routeResult?.path}
+                  savedPlaces={savedPlaces}
+                  routeStartId={routeStartId}
+                  routeEndId={routeEndId}
+                  onSavePlace={handleSavePlace}
+                  onRemoveSavedPlace={handleRemoveSavedPlace}
+                  onSetRouteStart={handleSetRouteStart}
+                  onSetRouteEnd={handleSetRouteEnd}
+                  onExpand={() => setIsMapModalOpen(true)}
+                />
+              </div>
+
+              {/* 하단: 리스트 패널 */}
+              <div className="right-bottom-panel">
+                <PlaceListPanel
+                  places={displayedPlaces}
+                  savedPlaces={savedPlaces}
+                  selectedPlaceId={selectedPlaceId}
+                  onSelectPlace={handleSelectPlace}
+                  onRemovePlace={handleRemovePlace}
+                  routeMode={routeMode}
+                  routes={routes}
+                  onChangeRouteMode={handleChangeRouteMode}
+                  onRemoveRoute={handleRemoveRoute}
+                  onSelectRoute={handleSelectRoute}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 4. 지도 확장 모달 */}
+      {/* 3. 지도 확장 모달 */}
       <Modal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)}>
         <div style={{ width: '100%', height: '100%' }}>
           <KakaoMapViewer
