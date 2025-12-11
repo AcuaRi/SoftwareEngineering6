@@ -54,7 +54,7 @@ const parseSummary = (jsonString: string): string => {
 // --- 3. Axios 인스턴스 설정 ---
 const apiClient = axios.create({
     // 백엔드 서버 주소 (환경변수 없으면 로컬호스트 기본값)
-    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+    baseURL: 'https://some-place.onrender.com/' ,
     timeout: 30000, // 30초 대기
     headers: {
         'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ export const getRecommendation = async (
 
     try {
         // 실제 서버로 POST 요청 전송
-        const response = await apiClient.post<BackendResponse>('/api/v1/recommend', {
+        const response = await apiClient.post<BackendResponse>('/api/recommend', {
             query,
             history
         });
