@@ -15,7 +15,7 @@ export interface RouteResponse {
 
 // ✅ .env 에서 카카오 REST 키 읽기
 // .env: REACT_APP_KAKAO_REST_KEY=실제_32자리_REST_키
-const KAKAO_REST_KEY = process.env.REACT_APP_KAKAO_REST_KEY;
+const KAKAO_REST_KEY = "60c581a747cd015eccd6d3d8af509c58";
 
 if (!KAKAO_REST_KEY) {
   console.warn(
